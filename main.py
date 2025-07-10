@@ -1,12 +1,19 @@
 import os
 import shutil
+import sys
 from enum import Enum
 from markdown_parser import markdown_to_html_node, extract_title
 import traceback
 
-if os.path.exists("public"):
-    shutil.rmtree("public")
-    os.makedirs("public", exist_ok=True)
+
+if len(sys.argv) > 1:
+    basepath = sys.argv[1]
+else:
+    basepath = "/"
+
+if os.path.exists("docs"):
+    shutil.rmtree("docs")
+    os.makedirs("docs", exist_ok=True)
 
 def copy_contents_recursive(source_dir, dest_dir):
     if os.path.exists(dest_dir):
@@ -28,16 +35,16 @@ def copy_contents_recursive(source_dir, dest_dir):
     
 def main():
     source_static_dir = "static"
-    dest_public_dir = "public"
+    dest_public_dir = "docs"
 
     print(f"Starting copy from {source_static_dir} to {dest_public_dir}...")
     copy_contents_recursive(source_static_dir, dest_public_dir)
     print("Copy complete!")
 
-    generate_pages_recursive("content", "template.html", "public")
+    generate_pages_recursive("content", "template.html", "docs", basepath)
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
     try:
         with open(from_path, "r") as f:
@@ -64,6 +71,9 @@ def generate_page(from_path, template_path, dest_path):
         page = page.replace("{{ Content }}", html_content)
         print("Replaced template placeholders")
 
+        page = page.replace('href="/', f'href="{basepath}')
+        page = page.replace('src="/', f'src="{basepath}')
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         print(f"Writing to {dest_path}")
 
@@ -76,15 +86,15 @@ def generate_page(from_path, template_path, dest_path):
         traceback.print_exc()
    
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
     dir_list = os.listdir(dir_path_content)
     for path in dir_list:
         if os.path.isfile(os.path.join(dir_path_content, path)):
             if path.endswith(".md"):
-                generate_page(os.path.join(dir_path_content, path), template_path, os.path.join(dest_dir_path, (path[:-3] + ".html")))
+                generate_page(os.path.join(dir_path_content, path), template_path, os.path.join(dest_dir_path, (path[:-3] + ".html")), basepath)
         else:
             os.makedirs(os.path.join(dest_dir_path, path), exist_ok=True)
-            generate_pages_recursive(os.path.join(dir_path_content, path), template_path, os.path.join(dest_dir_path, path))
+            generate_pages_recursive(os.path.join(dir_path_content, path), template_path, os.path.join(dest_dir_path, path), basepath)
 
 
       
